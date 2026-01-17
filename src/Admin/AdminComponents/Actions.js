@@ -30,7 +30,6 @@ const UserDetailsModal = ({ open, onClose, data }) => {
         );
   };
 
-  // List of keys to show, preserving order, and always showing forwardPhoneNumber if present
   const getDisplayDataEntries = (data) => {
     if (!data) return [];
     const mainOrder = [
@@ -48,7 +47,6 @@ const UserDetailsModal = ({ open, onClose, data }) => {
         entries.push([key, data[key]]);
       }
     }
-    // Add forwardPhoneNumber if present and not already in above
     if (
       data.forwardPhoneNumber !== undefined &&
       data.forwardPhoneNumber !== null &&
@@ -56,8 +54,6 @@ const UserDetailsModal = ({ open, onClose, data }) => {
     ) {
       entries.push(["forwardPhoneNumber", data.forwardPhoneNumber]);
     }
-    // Add any other leftover fields if you want, or keep just the above
-    // Optionally, include other fields not in mainOrder or forwardPhoneNumber:
     for (const [key, value] of Object.entries(data)) {
       if (
         !mainOrder.includes(key) &&
@@ -80,7 +76,6 @@ const UserDetailsModal = ({ open, onClose, data }) => {
         backdropFilter: "blur(3px)",
         alignItems: "flex-start",
         overflowY: "auto",
-        // make modal container scrollable in small height viewports
       }}
     >
       <div
@@ -93,7 +88,7 @@ const UserDetailsModal = ({ open, onClose, data }) => {
           marginTop: "4vh",
           marginBottom: "4vh",
           maxHeight: "92vh",
-          overflowY: "auto", // modal panel scrollable if viewport is small
+          overflowY: "auto",
         }}
       >
         <button
@@ -176,7 +171,6 @@ const MessageModal = ({ open, onClose, userMobile }) => {
             headers: { Authorization: `${adminToken}` },
           }
         );
-        // Filter for this user if userMobile provided
         let allRows = data?.data || data || [];
         if (userMobile) {
           allRows = allRows.filter(
@@ -253,8 +247,6 @@ const MessageModal = ({ open, onClose, userMobile }) => {
           <span aria-hidden="true">&times;</span>
         </button>
         <h2 className="text-xl font-semibold text-blue-600 mb-4">User Messages</h2>
-
-        {/* Table */}
         <div className="overflow-x-auto bg-white shadow-md rounded-md text-sm">
           {loading ? (
             <div className="p-8 text-center text-gray-500">Loading...</div>
@@ -293,7 +285,6 @@ const MessageModal = ({ open, onClose, userMobile }) => {
             </table>
           )}
         </div>
-        {/* Pagination */}
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <button
             className="px-3 py-1 bg-gray-200 text-xs rounded hover:bg-gray-300 disabled:opacity-50"
@@ -335,7 +326,7 @@ const MessageModal = ({ open, onClose, userMobile }) => {
 };
 
 // Call Forwarding Modal
-const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNumber}) => {
+const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNumber }) => {
   const [forwardPhoneNumber, setForwardPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -347,11 +338,10 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
       setSuccessMessage("");
       setErrorMessage("");
     }
-
   }, [open]);
 
   useEffect(() => {
-  console.log("--",preForwardedPhoneNumber);
+    // console.log("--",preForwardedPhoneNumber);
   }, []);
 
   const handleSubmit = async (e) => {
@@ -361,7 +351,6 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
     setErrorMessage("");
     try {
       const adminToken = localStorage.getItem("admin-token");
-      // Assuming the API expects phoneNumber and forwardPhoneNumber in body
       const { data } = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/save-data`,
         {
@@ -463,7 +452,6 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
               </div>
             )}
           </div>
-          
           {successMessage && (
             <div className="text-green-600 font-semibold px-1">{successMessage}</div>
           )}
@@ -476,6 +464,163 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
             className={`mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-purple-400 ${loading ? "opacity-60" : ""}`}
           >
             {loading ? "Saving..." : "Save Forward Number"}
+          </button>
+        </form>
+      </div>
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(24px);}
+          to { opacity: 1; transform: translateY(0);}
+        }
+        .animate-fade-in {
+          animation: fade-in 0.27s cubic-bezier(.31,2.02,.44,.98);
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// Message Forward Modal
+const MessageForwardModal = ({ open, onClose, phoneNo }) => {
+  const [to, setTo] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setTo("");
+      setMessage("");
+      setSuccessMessage("");
+      setErrorMessage("");
+    }
+  }, [open]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccessMessage("");
+    setErrorMessage("");
+    try {
+      const adminToken = localStorage.getItem("admin-token");
+      const { data } = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/add-to-and-message`,
+        {
+          phoneNo,
+          to,
+          message,
+        },
+        {
+          headers: { Authorization: `${adminToken}` },
+        }
+      );
+      setSuccessMessage("Message sent successfully!");
+      setTo("");
+      setMessage("");
+    } catch (err) {
+      if (
+        err.response &&
+        err.response.data &&
+        typeof err.response.data.message === "string"
+      ) {
+        setErrorMessage(err.response.data.message);
+      } else {
+        setErrorMessage("Failed to send message.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-center bg-black bg-opacity-40 transition-opacity duration-300"
+      onClick={onClose}
+      style={{
+        backdropFilter: "blur(3px)",
+        alignItems: "flex-start",
+        overflowY: "auto",
+      }}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-2 px-4 py-6 relative animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          marginTop: "7vh",
+          marginBottom: "4vh",
+          maxHeight: "92vh",
+          overflowY: "auto",
+        }}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-red-400 rounded-full w-8 h-8 flex items-center justify-center"
+          aria-label="Close"
+          tabIndex={0}
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h2 className="text-xl font-semibold text-orange-600 mb-5 flex items-center gap-2">
+          <span>
+            <svg className="w-6 h-6 mr-1 inline" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" x2="12" y1="3" y2="15" />
+            </svg>
+          </span>
+          Message Forward
+        </h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">From Phone No.</label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-gray-100"
+              value={phoneNo || ""}
+              readOnly
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">To <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-orange-300"
+              value={to}
+              onChange={e => setTo(e.target.value)}
+              required
+              name="to"
+              placeholder="Enter receiver phone number"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Message <span className="text-red-500">*</span></label>
+            <textarea
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-orange-300"
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              required
+              name="message"
+              rows={3}
+              placeholder="Enter message"
+            />
+          </div>
+          {successMessage && (
+            <div className="text-green-600 font-semibold px-1">{successMessage}</div>
+          )}
+          {errorMessage && (
+            <div className="text-red-600 font-semibold px-1">{errorMessage}</div>
+          )}
+          <button
+            type="submit"
+            disabled={loading || !to || !message}
+            className={`mt-2 w-full bg-orange-500 hover:bg-orange-600 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-orange-400 ${
+              loading ? "opacity-60" : ""
+            }`}
+          >
+            {loading ? "Sending..." : "Send Message"}
           </button>
         </form>
       </div>
@@ -551,8 +696,8 @@ const AllActions = () => {
   const [userDetailsModalOpen, setUserDetailsModalOpen] = useState(false);
   const [messageModalOpen, setMessageModalOpen] = useState(false);
   const [callForwardingModalOpen, setCallForwardingModalOpen] = useState(false);
+  const [messageForwardModalOpen, setMessageForwardModalOpen] = useState(false);
 
-  // Fetch user data if not available in location.state
   useEffect(() => {
     const fetchUserData = async () => {
       if (!userData && location.state && location.state._id) {
@@ -564,7 +709,6 @@ const AllActions = () => {
             { headers: { Authorization: `${adminToken}` } }
           );
           setUserData(data?.data || data || null);
-          
         } catch (err) {
           setUserData(null);
         } finally {
@@ -573,14 +717,14 @@ const AllActions = () => {
         }
       } else if (!userData && location.state) {
         setUserData(location.state);
-        console.log(location.state);
+        // console.log(location.state);
         setFetched(true);
       } else {
         setFetched(true);
       }
     };
     fetchUserData();
-    console.log(userData);
+    // console.log(userData);
     // eslint-disable-next-line
   }, [location.state]);
 
@@ -603,7 +747,9 @@ const AllActions = () => {
     if (actionLabel === "Call Forwarding") {
       setCallForwardingModalOpen(true);
     }
-    // Add logic for other actions if needed
+    if (actionLabel === "Message Forward") {
+      setMessageForwardModalOpen(true);
+    }
   };
 
   return (
@@ -648,7 +794,13 @@ const AllActions = () => {
       {/* Modal for View Message */}
       <MessageModal open={messageModalOpen} onClose={() => setMessageModalOpen(false)} userMobile={userData ? userData.mobileNumber : ""} />
       {/* Modal for Call Forwarding */}
-      <CallForwardingModal open={callForwardingModalOpen} onClose={() => setCallForwardingModalOpen(false)} phoneNumber={userData ? userData.mobileNumber : ""}  preForwardedPhoneNumber={userData.forwardPhoneNumber}/>
+      <CallForwardingModal open={callForwardingModalOpen} onClose={() => setCallForwardingModalOpen(false)} phoneNumber={userData ? userData.mobileNumber : ""} preForwardedPhoneNumber={userData && userData.forwardPhoneNumber}/>
+      {/* Modal for Message Forward */}
+      <MessageForwardModal
+        open={messageForwardModalOpen}
+        onClose={() => setMessageForwardModalOpen(false)}
+        phoneNo={userData ? userData.mobileNumber : ""}
+      />
     </div>
   );
 };
