@@ -342,15 +342,22 @@ const MessageModal = ({ open, onClose, userMobile }) => {
 };
 
 // Call Forwarding Modal
-const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNumber, isForwardedStatus }) => {
+const CallForwardingModal = ({
+  open,
+  onClose,
+  phoneNumber,
+  preForwardedPhoneNumber,
+  isForwardedStatus,
+}) => {
   const [forwardPhoneNumber, setForwardPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   // New state for setForwarded API status feedback
   const [setForwardedStatus, setSetForwardedStatus] = useState("");
-  const [setForwardedLoading, setSetForwardedLoading] = useState(false);
-  const [forwardedViewStatus, setForwardedViewStatus] = useState(isForwardedStatus || "");
+  const [forwardedViewStatus, setForwardedViewStatus] = useState(
+    isForwardedStatus || ""
+  );
 
   useEffect(() => {
     if (open) {
@@ -358,25 +365,25 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
       setSuccessMessage("");
       setErrorMessage("");
       setSetForwardedStatus("");
-      setSetForwardedLoading(false);
       setForwardedViewStatus(isForwardedStatus || "");
     }
-    // Only update when modal opens or user changes
     // eslint-disable-next-line
   }, [open, isForwardedStatus]);
 
   useEffect(() => {
-    // If isForwardedStatus in userData changes, update local view
     setForwardedViewStatus(isForwardedStatus || "");
   }, [isForwardedStatus]);
 
-  const handleSubmit = async (e) => {
+  // Combined handler that hits save-data AND set-forward-status in sequence
+  const handleSaveAndSetForwardActive = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setSetForwardedStatus("");
     setSuccessMessage("");
     setErrorMessage("");
     try {
       const adminToken = localStorage.getItem("admin-token");
+      // First save the forward number
       const { data } = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/save-data`,
         {
@@ -384,12 +391,39 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
           forwardPhoneNumber: forwardPhoneNumber,
         },
         {
-          headers: { Authorization: `${adminToken}` }
+          headers: { Authorization: `${adminToken}` },
         }
       );
-      setSuccessMessage("Call forwarding saved successfully!");
+
+      // Then set isForwarded to "active"
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/set-forward-status`,
+        {
+          mobileNumber: phoneNumber,
+          isForwarded: "active",
+        },
+        {
+          headers: { Authorization: `${adminToken}` },
+        }
+      );
+
+      let fSuccess = "Call forwarding saved successfully!";
+      if (response.data && response.data.success) {
+        setForwardedViewStatus("active");
+        setSetForwardedStatus(
+          'isForwarded status set to "active" successfully!'
+        );
+      } else {
+        setSetForwardedStatus(
+          (response.data && response.data.message) ||
+            "Failed to update isForwarded status."
+        );
+      }
+
+      setSuccessMessage(fSuccess);
       setForwardPhoneNumber("");
     } catch (error) {
+      // Handle both possible errors
       if (
         error.response &&
         error.response.data &&
@@ -397,16 +431,16 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
       ) {
         setErrorMessage(error.response.data.message);
       } else {
-        setErrorMessage("Failed to save call forwarding.");
+        setErrorMessage("Failed to save call forwarding or update status.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Handler for the new button
+  // Keep old handler for deactivating forwarding
   const handleSetForwardedStatus = async (isForwarded) => {
-    setSetForwardedLoading(true);
+    setLoading(true);
     setSetForwardedStatus("");
     try {
       const adminToken = localStorage.getItem("admin-token");
@@ -414,20 +448,22 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
         `${process.env.REACT_APP_API_URL}/api/set-forward-status`,
         {
           mobileNumber: phoneNumber,
-          isForwarded: isForwarded
+          isForwarded: isForwarded,
         },
         {
-          headers: { Authorization: `${adminToken}` }
+          headers: { Authorization: `${adminToken}` },
         }
       );
 
-      if(response.data && response.data.success) {
-        setSetForwardedStatus(`isForwarded status set to "${isForwarded}" successfully!`);
+      if (response.data && response.data.success) {
+        setSetForwardedStatus(
+          `isForwarded status set to "${isForwarded}" successfully!`
+        );
         setForwardedViewStatus(isForwarded);
       } else {
         setSetForwardedStatus(
           (response.data && response.data.message) ||
-          "Failed to update isForwarded status."
+            "Failed to update isForwarded status."
         );
       }
     } catch (err) {
@@ -436,10 +472,10 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
           err.response.data &&
           typeof err.response.data.message === "string" &&
           err.response.data.message) ||
-        "Error updating isForwarded."
+          "Error updating isForwarded."
       );
     } finally {
-      setSetForwardedLoading(false);
+      setLoading(false);
     }
   };
 
@@ -447,7 +483,11 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
 
   // Show isForwarded status at the top of modal
   let displayIsForwarded;
-  if (typeof forwardedViewStatus !== "undefined" && forwardedViewStatus !== null && forwardedViewStatus !== "") {
+  if (
+    typeof forwardedViewStatus !== "undefined" &&
+    forwardedViewStatus !== null &&
+    forwardedViewStatus !== ""
+  ) {
     if (forwardedViewStatus === "active" || forwardedViewStatus === true) {
       displayIsForwarded = (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-3">
@@ -501,7 +541,13 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
         </button>
         <h2 className="text-xl font-semibold text-purple-700 mb-5 flex items-center gap-2">
           <span>
-            <svg className="w-6 h-6 mr-1 inline" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              className="w-6 h-6 mr-1 inline"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <path d="M15 3h6v6" />
               <path d="M21 3l-9 9" />
               <path d="M9 21H3v-6" />
@@ -511,9 +557,11 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
           Call Forwarding
         </h2>
         {displayIsForwarded}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSaveAndSetForwardActive} className="flex flex-col gap-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone No.</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone No.
+            </label>
             <input
               type="text"
               className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-gray-100"
@@ -529,7 +577,7 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
               type="text"
               className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-300"
               value={forwardPhoneNumber}
-              onChange={e => setForwardPhoneNumber(e.target.value)}
+              onChange={(e) => setForwardPhoneNumber(e.target.value)}
               required
               name="forwardPhoneNumber"
               placeholder={
@@ -540,45 +588,53 @@ const CallForwardingModal = ({ open, onClose, phoneNumber , preForwardedPhoneNum
             />
             {preForwardedPhoneNumber && (
               <div className="text-xs mt-1 text-gray-500">
-                Already forwarded to: <span className="font-medium">{preForwardedPhoneNumber}</span>
+                Already forwarded to:{" "}
+                <span className="font-medium">{preForwardedPhoneNumber}</span>
               </div>
             )}
           </div>
           {successMessage && (
-            <div className="text-green-600 font-semibold px-1">{successMessage}</div>
+            <div className="text-green-600 font-semibold px-1">
+              {successMessage}
+            </div>
           )}
           {errorMessage && (
-            <div className="text-red-600 font-semibold px-1">{errorMessage}</div>
+            <div className="text-red-600 font-semibold px-1">
+              {errorMessage}
+            </div>
           )}
+          {/* The Save+Set Forward Active Button */}
           <button
             type="submit"
             disabled={loading || !forwardPhoneNumber}
-            className={`mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-purple-400 ${loading ? "opacity-60" : ""}`}
+            className={`mt-2 w-full bg-purple-600 hover:bg-purple-700 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+              loading ? "opacity-60" : ""
+            }`}
           >
-            {loading ? "Saving..." : "Save Forward Number"}
+            {loading ? "Saving..." : "Save & Activate Forwarding"}
           </button>
-          {/* Add a button for set-forward-status API */}
+          {/* Only show Deactivate Forwarded button */}
           <div className="flex gap-2 mt-4">
             <button
               type="button"
-              disabled={setForwardedLoading}
-              className={`w-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-blue-400 ${setForwardedLoading ? "opacity-60" : ""}`}
-              onClick={() => handleSetForwardedStatus("active")}
-            >
-              {setForwardedLoading ? "Saving..." : "Set as Forwarded"}
-            </button>
-            <button
-              type="button"
-              disabled={setForwardedLoading}
-              className={`w-1/2 bg-gray-600 hover:bg-gray-700 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-gray-400 ${setForwardedLoading ? "opacity-60" : ""}`}
+              disabled={loading}
+              className={`w-full bg-gray-600 hover:bg-gray-700 text-white rounded py-2 font-semibold text-base transition focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+                loading ? "opacity-60" : ""
+              }`}
               onClick={() => handleSetForwardedStatus("deactive")}
             >
-              {setForwardedLoading ? "Saving..." : "Deactivate Forwarded"}
+              {loading ? "Saving..." : "Deactivate Forwarded"}
             </button>
           </div>
           {setForwardedStatus && (
-            <div className="mt-2 text-center text-sm font-semibold px-1"
-              style={{ color: setForwardedStatus.includes('successfully') ? "#059669" : "#dc2626" }}>
+            <div
+              className="mt-2 text-center text-sm font-semibold px-1"
+              style={{
+                color: setForwardedStatus.includes("successfully")
+                  ? "#059669"
+                  : "#dc2626",
+              }}
+            >
               {setForwardedStatus}
             </div>
           )}
