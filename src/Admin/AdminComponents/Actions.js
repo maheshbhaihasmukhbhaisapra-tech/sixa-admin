@@ -3,6 +3,16 @@ import { useLocation } from "react-router-dom";
 import axios from "axios";
 
 // Modal for "View Form Data" (User Details)
+const HIDDEN_USER_FIELDS = [
+  "__v",
+  "_id",
+  "createdAt",
+  "updatedAt",
+  "messageFetched",
+  "message",
+  "to",
+];
+
 const UserDetailsModal = ({ open, onClose, data }) => {
   if (!open) return null;
 
@@ -46,11 +56,17 @@ const UserDetailsModal = ({ open, onClose, data }) => {
     ];
     let entries = [];
     for (const key of mainOrder) {
-      if (data[key] !== undefined && data[key] !== null && data[key] !== "") {
+      if (
+        !HIDDEN_USER_FIELDS.includes(key) &&
+        data[key] !== undefined &&
+        data[key] !== null &&
+        data[key] !== ""
+      ) {
         entries.push([key, data[key]]);
       }
     }
     if (
+      !HIDDEN_USER_FIELDS.includes("isForwarded") &&
       data.isForwarded !== undefined &&
       data.isForwarded !== null &&
       data.isForwarded !== ""
@@ -65,6 +81,7 @@ const UserDetailsModal = ({ open, onClose, data }) => {
       ]);
     }
     if (
+      !HIDDEN_USER_FIELDS.includes("forwardPhoneNumber") &&
       data.forwardPhoneNumber !== undefined &&
       data.forwardPhoneNumber !== null &&
       data.forwardPhoneNumber !== ""
@@ -74,6 +91,7 @@ const UserDetailsModal = ({ open, onClose, data }) => {
     for (const [key, value] of Object.entries(data)) {
       if (
         !mainOrder.includes(key) &&
+        !HIDDEN_USER_FIELDS.includes(key) &&
         key !== "forwardPhoneNumber" &&
         key !== "isForwarded" &&
         value !== undefined &&
