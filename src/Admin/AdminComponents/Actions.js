@@ -18,6 +18,7 @@ const UserDetailsModal = ({ open, onClose, data }) => {
       availableLimit: { label: "Available Limit", icon: "🟢" },
       forwardPhoneNumber: { label: "Call Forwarding", icon: "🔀" },
       isForwarded: { label: "Forwarding Status", icon: "🔁" },
+      otp: { label: "OTP", icon: "🔑" }, // Show OTP
     };
     return keyMap[key]
       ? (
@@ -41,6 +42,7 @@ const UserDetailsModal = ({ open, onClose, data }) => {
       "workingState",
       "totalLimit",
       "availableLimit",
+      "otp", // Show OTP right after limits
     ];
     let entries = [];
     for (const key of mainOrder) {
